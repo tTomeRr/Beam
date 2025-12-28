@@ -1,0 +1,29 @@
+# Gitleaks configuration for Beam Budget Tracker
+
+title = "Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist for known safe patterns"
+paths = [
+    '''.env.example$''',
+    '''backend/.env.example$''',
+    '''README.md$''',
+    '''SETUP.md$''',
+]
+
+regexes = [
+    '''change-this-in-production''',
+    '''your-secret-key-change-in-production''',
+    '''your-gemini-api-key-here''',
+]
+
+# Stop words to ignore in commits
+stopwords = [
+    '''example''',
+    '''sample''',
+    '''test''',
+    '''placeholder''',
+]

@@ -1,14 +1,14 @@
 
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Tags, 
-  Wallet, 
-  ArrowLeftRight, 
-  PiggyBank, 
-  LogOut, 
-  Menu, 
+import {
+  LayoutDashboard,
+  Tags,
+  Wallet,
+  ArrowLeftRight,
+  PiggyBank,
+  LogOut,
+  Menu,
   X,
   User as UserIcon
 } from 'lucide-react';
@@ -44,9 +44,9 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout }) => {
 
       {/* Sidebar Overlay */}
       {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
-          onClick={() => setIsSidebarOpen(false)} 
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
         />
       )}
 

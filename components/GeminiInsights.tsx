@@ -20,7 +20,7 @@ const GeminiInsights: React.FC<GeminiInsightsProps> = ({ categories, transaction
       // Fix: Follow @google/genai coding guidelines - use process.env.API_KEY directly
       // Always create a new instance before making a call to ensure the key is fresh.
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
+
       const summary = {
         categories: categories.map(c => ({
           name: c.name,
@@ -62,7 +62,7 @@ const GeminiInsights: React.FC<GeminiInsightsProps> = ({ categories, transaction
           <BrainCircuit className="text-indigo-600" size={24} />
           <h3 className="text-xl font-bold">תובנות Gemini</h3>
         </div>
-        <button 
+        <button
           onClick={generateInsight}
           disabled={loading}
           className="p-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors disabled:opacity-50"
@@ -77,7 +77,7 @@ const GeminiInsights: React.FC<GeminiInsightsProps> = ({ categories, transaction
             <p className="text-slate-400 text-sm">לחצו על הניצוץ לקבלת ניתוח חכם של התקציב שלכם</p>
           </div>
         )}
-        
+
         {loading && (
           <div className="space-y-2 py-4">
             <div className="h-4 bg-slate-100 rounded-full w-3/4 animate-pulse"></div>

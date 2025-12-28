@@ -1,21 +1,22 @@
 # Beam ✨
 
-**Smart Budget Tracker**
+**Smart Budget Tracker - Multi-User Family Edition**
 
-A clean, modern budget tracking application with Hebrew support. Track your monthly spending, manage categories, plan budgets, and keep your finances clear and organized.
+A modern budget tracking application with Hebrew support, now with full backend support for multi-user family budgeting on your private homelab.
 
 ---
 
 ## Features
 
-✅ **Simple Login** - Just enter your name and email, no complex auth setup
+✅ **Multi-User Support** - Secure JWT authentication for family members
+✅ **Data Persistence** - PostgreSQL database with automated backups
 ✅ **Monthly Budget Planning** - Set spending limits for each category
 ✅ **Category Management** - 20+ icons to choose from, customize colors
 ✅ **Transaction Tracking** - Record and monitor all your expenses
 ✅ **Savings Tracker** - Keep track of all your savings accounts
 ✅ **Month Navigation** - Browse through past and future months
 ✅ **Hebrew Support** - Full RTL support with Hebrew interface
-✅ **Privacy-First** - All data stored locally, nothing sent to servers
+✅ **Docker Deployment** - Easy homelab setup with Docker Compose
 ✅ **Negative Budgets** - See when you're over budget
 
 ---
@@ -23,26 +24,29 @@ A clean, modern budget tracking application with Hebrew support. Track your mont
 ## Quick Start
 
 ```bash
-# Install dependencies
-npm install --legacy-peer-deps
+# Setup and start all services (recommended)
+./setup.sh
+docker-compose up -d
 
-# Start development server
-npm run dev
-
-# Open in browser
-http://localhost:3000
+# Access the application
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:4000
 ```
+
+For detailed setup instructions, see [SETUP.md](SETUP.md).
 
 ---
 
-## Tech Stack
+## Architecture
 
-- **Frontend**: React 19 + TypeScript
-- **Routing**: React Router v6
+- **Frontend**: React 19 + TypeScript (Vite)
+- **Backend**: Node.js + Express + TypeScript
+- **Database**: PostgreSQL 16
+- **Authentication**: JWT tokens
+- **Deployment**: Docker Compose
 - **Charts**: Recharts
 - **Icons**: Lucide React
 - **Styling**: Tailwind CSS
-- **Build**: Vite
 
 ---
 

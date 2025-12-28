@@ -93,7 +93,7 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, transactions, budgets
             return t.categoryId === cat.id && (d.getMonth() + 1) === currentMonth && d.getFullYear() === currentYear;
           })
           .reduce((acc, t) => acc + t.amount, 0);
-        
+
         return {
           name: cat.name,
           budgeted,
@@ -143,30 +143,30 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, transactions, budgets
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard 
-          title="תקציב מתוכנן" 
-          amount={stats.totalBudgeted} 
-          icon={<DollarSign className="text-blue-600" />} 
+        <SummaryCard
+          title="תקציב מתוכנן"
+          amount={stats.totalBudgeted}
+          icon={<DollarSign className="text-blue-600" />}
           color="blue"
         />
-        <SummaryCard 
-          title="הוצאות בפועל" 
-          amount={stats.totalSpent} 
-          icon={<TrendingDown className="text-rose-600" />} 
+        <SummaryCard
+          title="הוצאות בפועל"
+          amount={stats.totalSpent}
+          icon={<TrendingDown className="text-rose-600" />}
           color="rose"
           subtitle={`${stats.percentSpent.toFixed(1)}% מהתקציב`}
         />
-        <SummaryCard 
-          title="נותר לבזבוז" 
-          amount={stats.availableToSpend} 
-          icon={<TrendingUp className="text-emerald-600" />} 
+        <SummaryCard
+          title="נותר לבזבוז"
+          amount={stats.availableToSpend}
+          icon={<TrendingUp className="text-emerald-600" />}
           color="emerald"
           subtitle="ללא חריגה"
         />
-        <SummaryCard 
-          title="סה״כ חסכונות" 
-          amount={stats.totalSavings} 
-          icon={<ShieldCheck className="text-amber-600" />} 
+        <SummaryCard
+          title="סה״כ חסכונות"
+          amount={stats.totalSavings}
+          icon={<ShieldCheck className="text-amber-600" />}
           color="amber"
         />
       </div>
@@ -181,15 +181,15 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, transactions, budgets
                 <BarChart data={categoryData} layout="vertical" margin={{ left: 40, right: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                   <XAxis type="number" hide />
-                  <YAxis 
-                    dataKey="name" 
-                    type="category" 
-                    width={80} 
-                    axisLine={false} 
-                    tickLine={false} 
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    width={80}
+                    axisLine={false}
+                    tickLine={false}
                     tick={{ fontSize: 12, fontWeight: 500 }}
                   />
-                  <Tooltip 
+                  <Tooltip
                     cursor={{ fill: '#f8fafc' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />

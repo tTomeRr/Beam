@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { Save, History, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Save, History, ChevronRight, ChevronLeft, AlertCircle } from 'lucide-react';
 import { Category, BudgetPlan } from '../types';
 import { getIcon } from '../constants';
+import { api } from '../services/api';
 
 interface BudgetPlanningProps {
   categories: Category[];
@@ -14,6 +15,9 @@ const BudgetPlanning: React.FC<BudgetPlanningProps> = ({ categories, budgets, se
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
   const [localAmounts, setLocalAmounts] = useState<Record<number, number>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   React.useEffect(() => {
     const existing = budgets.filter(b => b.month === month && b.year === year);
@@ -24,24 +28,38 @@ const BudgetPlanning: React.FC<BudgetPlanningProps> = ({ categories, budgets, se
     setLocalAmounts(amounts);
   }, [month, year, budgets]);
 
-  const handleSave = () => {
-    const newBudgets = [...budgets.filter(b => !(b.month === month && b.year === year))];
-    
-    // Fix: Explicitly cast amount to number to resolve 'unknown' comparison error (Line 30)
-    Object.entries(localAmounts).forEach(([catId, amount]) => {
-      if ((amount as number) > 0) {
-        newBudgets.push({
-          id: Date.now() + Math.random(),
-          categoryId: parseInt(catId),
-          month,
-          year,
-          plannedAmount: amount as number
-        });
-      }
-    });
+  const handleSave = async () => {
+    setLoading(true);
+    setError('');
+    setSuccess('');
 
-    setBudgets(newBudgets);
-    alert('התקציב נשמר בהצלחה!');
+    try {
+      const updatedBudgets: BudgetPlan[] = [];
+
+      for (const [catId, amount] of Object.entries(localAmounts)) {
+        if ((amount as number) > 0) {
+          const budget = await api.budgets.create(
+            parseInt(catId),
+            month,
+            year,
+            amount as number
+          );
+          updatedBudgets.push(budget);
+        }
+      }
+
+      const newBudgets = [
+        ...budgets.filter(b => !(b.month === month && b.year === year)),
+        ...updatedBudgets
+      ];
+      setBudgets(newBudgets);
+      setSuccess('התקציב נשמר בהצלחה!');
+    } catch (err) {
+      setError('שגיאה בשמירת התקציב');
+      console.error('Failed to save budgets:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Fix: Explicitly cast Object.values to number[] to resolve 'unknown' addition error in reduce (Line 45)
@@ -65,6 +83,20 @@ const BudgetPlanning: React.FC<BudgetPlanningProps> = ({ categories, budgets, se
         </div>
       </div>
 
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2 text-red-700">
+          <AlertCircle size={20} />
+          <span className="text-sm font-medium">{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div className="p-4 bg-green-50 border border-green-200 rounded-2xl flex items-center gap-2 text-green-700">
+          <AlertCircle size={20} />
+          <span className="text-sm font-medium">{success}</span>
+        </div>
+      )}
+
       <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <h3 className="font-bold text-slate-700">פירוט תקציב</h3>
@@ -78,7 +110,7 @@ const BudgetPlanning: React.FC<BudgetPlanningProps> = ({ categories, budgets, se
           {categories.filter(c => c.isActive).map(cat => (
             <div key={cat.id} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-slate-50/30 transition-colors">
               <div className="flex items-center gap-4 flex-1">
-                <div 
+                <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
                   style={{ backgroundColor: cat.color }}
                 >
@@ -92,7 +124,7 @@ const BudgetPlanning: React.FC<BudgetPlanningProps> = ({ categories, budgets, se
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-slate-400 font-bold">₪</span>
-                <input 
+                <input
                   type="number"
                   value={localAmounts[cat.id] || ''}
                   onChange={(e) => setLocalAmounts({...localAmounts, [cat.id]: parseFloat(e.target.value) || 0})}
@@ -105,13 +137,23 @@ const BudgetPlanning: React.FC<BudgetPlanningProps> = ({ categories, budgets, se
         </div>
 
         <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row gap-4">
-          <button 
+          <button
             onClick={handleSave}
-            className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
+            disabled={loading}
+            className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white py-4 rounded-2xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Save size={20} /> שמירת תקציב חודשי
+            {loading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            ) : (
+              <>
+                <Save size={20} /> שמירת תקציב חודשי
+              </>
+            )}
           </button>
-          <button className="px-6 py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-all">
+          <button
+            disabled={loading}
+            className="px-6 py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-all disabled:opacity-50"
+          >
             <History size={20} /> שכפול מחודש קודם
           </button>
         </div>

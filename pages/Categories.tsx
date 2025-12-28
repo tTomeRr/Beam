@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { Plus, Check, X } from 'lucide-react';
+import { Plus, Check, X, AlertCircle } from 'lucide-react';
 import { Category } from '../types';
 import { getIcon, AVAILABLE_ICONS } from '../constants';
+import { api } from '../services/api';
 
 interface CategoriesProps {
   categories: Category[];
@@ -13,24 +14,44 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
   const [isAdding, setIsAdding] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [newCat, setNewCat] = useState({ name: '', color: '#6366f1', icon: 'Briefcase' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const addCategory = () => {
-    if (!newCat.name) return;
-    const category: Category = {
-      id: Date.now(),
-      name: newCat.name,
-      icon: newCat.icon,
-      color: newCat.color,
-      isActive: true
-    };
-    setCategories([...categories, category]);
-    setNewCat({ name: '', color: '#6366f1', icon: 'Briefcase' });
-    setIsAdding(false);
-    setShowIconPicker(false);
+  const addCategory = async () => {
+    if (!newCat.name.trim()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const category = await api.categories.create(
+        newCat.name.trim(),
+        newCat.icon,
+        newCat.color
+      );
+      setCategories([...categories, category]);
+      setNewCat({ name: '', color: '#6366f1', icon: 'Briefcase' });
+      setIsAdding(false);
+      setShowIconPicker(false);
+    } catch (err) {
+      setError('שגיאה בהוספת קטגוריה');
+      console.error('Failed to add category:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const toggleActive = (id: number) => {
-    setCategories(categories.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c));
+  const toggleActive = async (id: number) => {
+    const category = categories.find(c => c.id === id);
+    if (!category) return;
+
+    try {
+      const updated = await api.categories.update(id, { isActive: !category.isActive });
+      setCategories(categories.map(c => c.id === id ? updated : c));
+    } catch (err) {
+      setError('שגיאה בעדכון קטגוריה');
+      console.error('Failed to update category:', err);
+    }
   };
 
   return (
@@ -40,7 +61,7 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
           <h2 className="text-3xl font-black text-slate-900">קטגוריות</h2>
           <p className="text-slate-500">נהלו את סוגי ההוצאות שלכם</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsAdding(true)}
           className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
         >
@@ -48,6 +69,13 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
           חדש
         </button>
       </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2 text-red-700">
+          <AlertCircle size={20} />
+          <span className="text-sm font-medium">{error}</span>
+        </div>
+      )}
 
       {isAdding && (
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-top-4 duration-300">
@@ -125,16 +153,25 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
           <div className="flex gap-3 mt-6">
             <button
               onClick={addCategory}
-              className="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2"
+              disabled={loading}
+              className="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Check size={20} /> שמירה
+              {loading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <>
+                  <Check size={20} /> שמירה
+                </>
+              )}
             </button>
             <button
               onClick={() => {
                 setIsAdding(false);
                 setShowIconPicker(false);
+                setError('');
               }}
-              className="px-6 py-3 border border-slate-200 rounded-2xl font-bold text-slate-500"
+              disabled={loading}
+              className="px-6 py-3 border border-slate-200 rounded-2xl font-bold text-slate-500 disabled:opacity-50"
             >
               ביטול
             </button>
@@ -146,7 +183,7 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
         {categories.map(cat => (
           <div key={cat.id} className="bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between group hover:border-indigo-200 hover:shadow-md transition-all">
             <div className="flex items-center gap-4">
-              <div 
+              <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg"
                 style={{ backgroundColor: cat.color }}
               >

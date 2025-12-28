@@ -1,7 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Filter, Trash2, Calendar, FileText, CreditCard } from 'lucide-react';
+import { Plus, Search, Filter, Trash2, Calendar, FileText, CreditCard, AlertCircle } from 'lucide-react';
 import { Category, Transaction } from '../types';
+import { api } from '../services/api';
 
 interface TransactionsProps {
   categories: Category[];
@@ -12,29 +13,47 @@ interface TransactionsProps {
 const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, setTransactions }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [filterText, setFilterText] = useState('');
-  const [newTx, setNewTx] = useState({ 
-    categoryId: categories[0]?.id || 0, 
-    amount: '', 
-    description: '', 
-    date: new Date().toISOString().split('T')[0] 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [newTx, setNewTx] = useState({
+    categoryId: categories[0]?.id || 0,
+    amount: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0]
   });
 
-  const addTransaction = () => {
+  const addTransaction = async () => {
     if (!newTx.amount || !newTx.description) return;
-    const tx: Transaction = {
-      id: Date.now(),
-      categoryId: newTx.categoryId,
-      amount: parseFloat(newTx.amount),
-      description: newTx.description,
-      date: newTx.date
-    };
-    setTransactions([...transactions, tx]);
-    setNewTx({ ...newTx, amount: '', description: '' });
-    setIsAdding(false);
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const tx = await api.transactions.create(
+        newTx.categoryId,
+        parseFloat(newTx.amount),
+        newTx.date,
+        newTx.description
+      );
+      setTransactions([...transactions, tx]);
+      setNewTx({ ...newTx, amount: '', description: '' });
+      setIsAdding(false);
+    } catch (err) {
+      setError('שגיאה בהוספת הוצאה');
+      console.error('Failed to add transaction:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteTx = (id: number) => {
-    setTransactions(transactions.filter(t => t.id !== id));
+  const deleteTx = async (id: number) => {
+    try {
+      await api.transactions.delete(id);
+      setTransactions(transactions.filter(t => t.id !== id));
+    } catch (err) {
+      setError('שגיאה במחיקת הוצאה');
+      console.error('Failed to delete transaction:', err);
+    }
   };
 
   const filtered = useMemo(() => {
@@ -50,13 +69,20 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
           <h2 className="text-3xl font-black text-slate-900">הוצאות</h2>
           <p className="text-slate-500">עקבו אחר כל רכישה שביצעתם</p>
         </div>
-        <button 
+        <button
           onClick={() => setIsAdding(true)}
           className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
         >
           <Plus size={20} /> הוצאה חדשה
         </button>
       </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-2 text-red-700">
+          <AlertCircle size={20} />
+          <span className="text-sm font-medium">{error}</span>
+        </div>
+      )}
 
       {isAdding && (
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-top-4">
@@ -66,8 +92,8 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs font-black text-slate-400 mb-2 uppercase">תיאור</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={newTx.description}
                 onChange={(e) => setNewTx({...newTx, description: e.target.value})}
                 placeholder="למשל: סופר פארם"
@@ -76,8 +102,8 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
             </div>
             <div>
               <label className="block text-xs font-black text-slate-400 mb-2 uppercase">סכום</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 value={newTx.amount}
                 onChange={(e) => setNewTx({...newTx, amount: e.target.value})}
                 placeholder="₪ 0.00"
@@ -86,7 +112,7 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
             </div>
             <div>
               <label className="block text-xs font-black text-slate-400 mb-2 uppercase">קטגוריה</label>
-              <select 
+              <select
                 value={newTx.categoryId}
                 onChange={(e) => setNewTx({...newTx, categoryId: parseInt(e.target.value)})}
                 className="w-full px-4 py-3 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
@@ -96,8 +122,8 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
             </div>
             <div>
               <label className="block text-xs font-black text-slate-400 mb-2 uppercase">תאריך</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={newTx.date}
                 onChange={(e) => setNewTx({...newTx, date: e.target.value})}
                 className="w-full px-4 py-3 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500"
@@ -105,8 +131,27 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
             </div>
           </div>
           <div className="flex gap-3 mt-8">
-            <button onClick={addTransaction} className="flex-1 bg-indigo-600 text-white py-3.5 rounded-2xl font-black">הוספה לרשימה</button>
-            <button onClick={() => setIsAdding(false)} className="px-8 py-3.5 border border-slate-200 rounded-2xl font-bold text-slate-500">ביטול</button>
+            <button
+              onClick={addTransaction}
+              disabled={loading}
+              className="flex-1 bg-indigo-600 text-white py-3.5 rounded-2xl font-black disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {loading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                'הוספה לרשימה'
+              )}
+            </button>
+            <button
+              onClick={() => {
+                setIsAdding(false);
+                setError('');
+              }}
+              disabled={loading}
+              className="px-8 py-3.5 border border-slate-200 rounded-2xl font-bold text-slate-500 disabled:opacity-50"
+            >
+              ביטול
+            </button>
           </div>
         </div>
       )}
@@ -115,8 +160,8 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
         <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="חיפוש לפי תיאור..."
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
@@ -164,7 +209,7 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
                     </td>
                     <td className="px-6 py-5 font-black text-slate-900">₪{tx.amount.toLocaleString()}</td>
                     <td className="px-6 py-5 text-left">
-                      <button 
+                      <button
                         onClick={() => deleteTx(tx.id)}
                         className="p-2 text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                       >
