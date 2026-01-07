@@ -25,15 +25,16 @@ beam/
 │   │   ├── App.tsx        # Main app component
 │   │   └── main.tsx       # Entry point
 │   ├── public/            # Static assets
-│   └── config files       # vite.config.ts, tsconfig.json, etc.
+│   ├── index.html         # HTML entry point
+│   └── config files       # vite.config.ts, tsconfig.json, Dockerfile, nginx.conf
 ├── backend/               # Express API server
 │   ├── src/
 │   │   ├── routes/        # API routes
+│   │   ├── controllers/   # Route controllers
 │   │   ├── middleware/    # Express middleware
-│   │   └── db/            # Database connection and migrations
-│   └── config files
-├── docs/                  # Project documentation
-└── Root config files      # docker-compose.yml, .env, etc.
+│   │   └── database/      # Database connection and migrations
+│   └── config files       # package.json, tsconfig.json, Dockerfile
+└── Root config files      # docker-compose.yml, .env, setup.sh
 ```
 
 ## Universal Base Guidelines
@@ -65,23 +66,24 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-**Security checks:**
+**Enabled checks:**
 - Gitleaks (secret detection)
 - Detect private keys
 - Check for .env files in commits
-
-**Code quality:**
-- ESLint for TypeScript/JavaScript
 - Trailing whitespace removal
+- End of file fixer
 - YAML/JSON/TOML validation
-- Backend tests on backend changes
-
-See `.github/PRE_COMMIT_SETUP.md` for details.
+- Check for merge conflicts
+- Check for large files (>1MB)
+- Mixed line ending fixer
 
 ## Commands
 
 ### Docker Compose (Primary Development Method)
 ```bash
+# Initial setup
+./setup.sh
+
 # Start all services (frontend, backend, database)
 docker-compose up -d
 
@@ -121,12 +123,6 @@ cd backend
 
 # Install dependencies
 npm install
-
-# Run tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
 
 # Start development server
 npm run dev
@@ -212,14 +208,15 @@ Adding a transaction:
 - **API authentication** - All requests require JWT token except /auth/login and /auth/register
 - **Environment variables** - API_URL configurable via VITE_API_URL in frontend/.env.local
 
-## File Locations
+## Key File Locations
 
-Key files you may need to reference:
 - Main app: `frontend/src/App.tsx`
+- Entry point: `frontend/src/main.tsx`
 - API client: `frontend/src/services/api.ts`
 - Types: `frontend/src/types/index.ts`
 - Constants: `frontend/src/constants/index.tsx`
 - Layout: `frontend/src/components/layout/Layout.tsx`
 - Pages: `frontend/src/pages/`
 - Backend API: `backend/src/`
-- Documentation: `docs/`
+- Docker config: `docker-compose.yml`
+- Setup script: `setup.sh`
