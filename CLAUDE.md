@@ -4,7 +4,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Beam is a smart budget tracker application with full Hebrew/RTL support. Originally a client-side app with localStorage, it is being migrated to a distributed architecture with separate frontend (React), backend (Node.js/TypeScript/Express), and database (PostgreSQL) services for multi-user family use hosted on a private homelab.
+Beam is a smart budget tracker application with full Hebrew/RTL support. It uses a distributed architecture with separate frontend (React), backend (Node.js/TypeScript/Express), and database (PostgreSQL) services for multi-user family use hosted on a private homelab.
+
+## Project Structure
+
+This is a monorepo organized as follows:
+
+```
+beam/
+├── frontend/              # React + Vite frontend
+│   ├── src/
+│   │   ├── components/    # React components organized by feature
+│   │   │   ├── layout/    # Layout components (Layout.tsx)
+│   │   │   └── insights/  # Insight components (GeminiInsights.tsx)
+│   │   ├── pages/         # Page components (Dashboard, Login, etc.)
+│   │   ├── services/      # API service layer
+│   │   ├── types/         # TypeScript type definitions
+│   │   ├── constants/     # App constants (icons, defaults)
+│   │   ├── styles/        # Global styles
+│   │   ├── App.tsx        # Main app component
+│   │   └── main.tsx       # Entry point
+│   ├── public/            # Static assets
+│   └── config files       # vite.config.ts, tsconfig.json, etc.
+├── backend/               # Express API server
+│   ├── src/
+│   │   ├── routes/        # API routes
+│   │   ├── middleware/    # Express middleware
+│   │   └── db/            # Database connection and migrations
+│   └── config files
+├── docs/                  # Project documentation
+└── Root config files      # docker-compose.yml, .env, etc.
+```
 
 ## Universal Base Guidelines
 
@@ -68,9 +98,11 @@ docker-compose up -d --build
 docker-compose exec backend npm run migrate
 ```
 
-### Frontend Development (Legacy - being migrated)
+### Frontend Development
 ```bash
-# Install dependencies (requires legacy-peer-deps flag)
+cd frontend
+
+# Install dependencies
 npm install --legacy-peer-deps
 
 # Start dev server on port 3000
@@ -109,22 +141,19 @@ npm run build
 The app uses **App.tsx** as the single source of truth, managing all state at the top level:
 - User authentication state
 - Categories, transactions, budgets, and savings arrays
-- All state synced automatically to localStorage via useEffect hooks
+- All state synced to backend API via frontend/src/services/api.ts
 
 State is passed down through React Router's route props to individual pages. No global state library is used.
 
-### Data Storage (localStorage)
-All data persists to browser localStorage with these keys:
-- `bt_user` - User login info (name, email)
-- `bt_categories` - Category definitions with icons/colors
-- `bt_transactions` - All expense transactions
-- `bt_budgets` - Monthly budget plans per category
-- `bt_savings` - Savings account balances
-
-**Safe Storage Wrapper**: App.tsx:14-55 implements a robust `safeStorage` utility that handles SecurityErrors and quota exceeded errors gracefully. Always use this pattern when adding new localStorage interactions.
+### API Integration
+All data persists to PostgreSQL via REST API:
+- JWT authentication with token stored in localStorage
+- API client in `frontend/src/services/api.ts`
+- Automatic Authorization header injection
+- Error handling with ApiError class
 
 ### Routing Structure
-Uses HashRouter (not BrowserRouter) for static hosting compatibility:
+Uses HashRouter for static hosting compatibility:
 - `/login` - Login page (public route)
 - `/dashboard` - Main overview with charts and stats
 - `/categories` - Manage spending categories
@@ -132,11 +161,11 @@ Uses HashRouter (not BrowserRouter) for static hosting compatibility:
 - `/transactions` - Record and view expenses
 - `/savings` - Track savings accounts
 
-Layout component (components/Layout.tsx) provides navigation sidebar and wraps all authenticated routes.
+Layout component (frontend/src/components/layout/Layout.tsx) provides navigation sidebar and wraps all authenticated routes.
 
 ### Type System
-**types.ts** defines all data interfaces. Key types:
-- `User` - Login credentials
+**frontend/src/types/index.ts** defines all data interfaces. Key types:
+- `User` - User credentials
 - `Category` - Spending categories (id, name, icon, color, isActive)
 - `Transaction` - Individual expenses (id, categoryId, amount, date, description)
 - `BudgetPlan` - Monthly spending limits (id, categoryId, month, year, plannedAmount)
@@ -145,7 +174,7 @@ Layout component (components/Layout.tsx) provides navigation sidebar and wraps a
 Categories use `isActive` flag instead of deletion to preserve transaction history.
 
 ### Icons and Defaults
-**constants.tsx** contains:
+**frontend/src/constants/index.tsx** contains:
 - `AVAILABLE_ICONS` - 20 Lucide icons available for categories with Hebrew labels
 - `DEFAULT_CATEGORIES` - 8 pre-configured categories loaded on first run
 - `getIcon(name, size)` - Utility to render icon components by name string
@@ -156,7 +185,7 @@ Dashboard and other pages implement month/year navigation:
 const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
 const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 ```
-Filter data by comparing transaction dates to selected month/year. See Dashboard.tsx:69-83 for the pattern.
+Filter data by comparing transaction dates to selected month/year.
 
 ### UI Patterns
 - **Tailwind CSS** for all styling (no CSS modules or styled-components)
@@ -169,15 +198,28 @@ Filter data by comparing transaction dates to selected month/year. See Dashboard
 
 ### Data Flow Example
 Adding a transaction:
-1. User inputs in Transactions.tsx form
-2. `setTransactions()` updates state in App.tsx
-3. useEffect in App.tsx:104-118 syncs to localStorage
-4. Dashboard.tsx automatically shows updated spending (props update triggers re-render)
+1. User inputs in frontend/src/pages/Transactions.tsx form
+2. API call via `api.transactions.create()` in frontend/src/services/api.ts
+3. Backend validates and stores in PostgreSQL
+4. Response updates local state via `setTransactions()`
+5. Dashboard.tsx automatically shows updated spending (props update triggers re-render)
 
 ## Special Considerations
 
 - **Never delete categories** - use `isActive: false` to preserve transaction history integrity
-- **Negative budgets are valid** - `availableToSpend` can go negative to show overspending (Dashboard.tsx:79)
+- **Negative budgets are valid** - `availableToSpend` can go negative to show overspending
 - **Month is 1-indexed** - JavaScript Date.getMonth() returns 0-11, but we store 1-12 in budgets/transactions
-- **No API calls** - This is a fully offline app; any features requiring external data would need localStorage-based mocks
-- **Environment variables** - GEMINI_API_KEY in .env.local is exposed via vite.config.ts for potential AI insights feature (components/GeminiInsights.tsx)
+- **API authentication** - All requests require JWT token except /auth/login and /auth/register
+- **Environment variables** - API_URL configurable via VITE_API_URL in frontend/.env.local
+
+## File Locations
+
+Key files you may need to reference:
+- Main app: `frontend/src/App.tsx`
+- API client: `frontend/src/services/api.ts`
+- Types: `frontend/src/types/index.ts`
+- Constants: `frontend/src/constants/index.tsx`
+- Layout: `frontend/src/components/layout/Layout.tsx`
+- Pages: `frontend/src/pages/`
+- Backend API: `backend/src/`
+- Documentation: `docs/`
