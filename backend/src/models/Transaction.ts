@@ -1,6 +1,15 @@
 import { query } from '../database/connection';
 import { Transaction } from '../types';
 
+const formatDate = (date: Date | string): string => {
+  if (typeof date === 'string') return date;
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const getAllTransactions = async (userId: number): Promise<Transaction[]> => {
   const result = await query(
     'SELECT id, user_id, category_id, amount, date, description FROM transactions WHERE user_id = $1 ORDER BY date DESC, id DESC',
@@ -11,7 +20,7 @@ export const getAllTransactions = async (userId: number): Promise<Transaction[]>
     userId: row.user_id,
     categoryId: row.category_id,
     amount: parseFloat(row.amount),
-    date: row.date,
+    date: formatDate(row.date),
     description: row.description,
   }));
 };
@@ -33,7 +42,7 @@ export const createTransaction = async (
     userId: row.user_id,
     categoryId: row.category_id,
     amount: parseFloat(row.amount),
-    date: row.date,
+    date: formatDate(row.date),
     description: row.description,
   };
 };
@@ -80,7 +89,7 @@ export const updateTransaction = async (
     userId: row.user_id,
     categoryId: row.category_id,
     amount: parseFloat(row.amount),
-    date: row.date,
+    date: formatDate(row.date),
     description: row.description,
   };
 };

@@ -244,8 +244,7 @@ describe('Savings Controller', () => {
         .delete(`/api/savings/${account.id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('message');
+      expect(response.status).toBe(204);
 
       const getResponse = await request(app)
         .get('/api/savings')

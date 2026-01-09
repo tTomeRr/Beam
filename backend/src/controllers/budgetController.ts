@@ -30,6 +30,10 @@ export const addBudget = async (
       throw new AppError('CategoryId, month, year, and plannedAmount are required', 400);
     }
 
+    if (month < 1 || month > 12) {
+      throw new AppError('Month must be between 1 and 12', 400);
+    }
+
     const budget = await createBudget(userId, categoryId, month, year, plannedAmount);
     res.status(201).json(budget);
   } catch (error) {
