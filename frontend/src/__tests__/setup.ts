@@ -1,5 +1,17 @@
 import '@testing-library/jest-dom';
 
+Object.defineProperty(globalThis, 'import', {
+  value: {
+    meta: {
+      env: {
+        VITE_API_URL: 'http://localhost:4000/api',
+      },
+    },
+  },
+  writable: true,
+  configurable: true,
+});
+
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   unobserve: jest.fn(),
