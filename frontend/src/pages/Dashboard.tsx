@@ -83,25 +83,37 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, transactions, budgets
   }, [budgets, transactions, savings, currentMonth, currentYear]);
 
   const categoryData = useMemo(() => {
-    return categories
-      .filter(c => c.isActive)
-      .map(cat => {
-        const budgeted = budgets.find(b => b.categoryId === cat.id && b.month === currentMonth && b.year === currentYear)?.plannedAmount || 0;
-        const spent = transactions
-          .filter(t => {
-            const d = new Date(t.date);
-            return t.categoryId === cat.id && (d.getMonth() + 1) === currentMonth && d.getFullYear() === currentYear;
-          })
-          .reduce((acc, t) => acc + t.amount, 0);
+    const parentCategories = categories.filter(c => c.isActive && c.parentCategoryId === null);
 
-        return {
-          name: cat.name,
-          budgeted,
-          spent,
-          color: cat.color
-        };
-      })
-      .filter(item => item.budgeted > 0 || item.spent > 0);
+    return parentCategories.map(cat => {
+      const budgeted = budgets.find(
+        b => b.categoryId === cat.id &&
+             b.month === currentMonth &&
+             b.year === currentYear
+      )?.plannedAmount || 0;
+
+      const subcategoryIds = categories
+        .filter(c => c.parentCategoryId === cat.id)
+        .map(c => c.id);
+
+      const categoryIds = [cat.id, ...subcategoryIds];
+      const spent = transactions
+        .filter(t => {
+          const d = new Date(t.date);
+          return categoryIds.includes(t.categoryId) &&
+                 (d.getMonth() + 1) === currentMonth &&
+                 d.getFullYear() === currentYear;
+        })
+        .reduce((acc, t) => acc + t.amount, 0);
+
+      return {
+        name: cat.name,
+        budgeted,
+        spent,
+        color: cat.color
+      };
+    })
+    .filter(item => item.budgeted > 0 || item.spent > 0);
   }, [categories, budgets, transactions, currentMonth, currentYear]);
 
   return (
@@ -219,12 +231,17 @@ const Dashboard: React.FC<DashboardProps> = ({ categories, transactions, budgets
                 <tbody className="divide-y divide-slate-50">
                   {transactions.slice(-5).reverse().map(t => {
                     const cat = categories.find(c => c.id === t.categoryId);
+                    const parentCat = cat?.parentCategoryId
+                      ? categories.find(c => c.id === cat.parentCategoryId)
+                      : null;
+                    const categoryDisplay = parentCat ? `${parentCat.name} > ${cat?.name}` : cat?.name;
+
                     return (
                       <tr key={t.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-4 font-medium">{t.description}</td>
                         <td className="py-4">
                           <span className="text-xs px-2 py-1 rounded-full bg-slate-100" style={{ color: cat?.color }}>
-                            {cat?.name}
+                            {categoryDisplay}
                           </span>
                         </td>
                         <td className="py-4 text-slate-400 text-sm">{t.date}</td>

@@ -19,6 +19,8 @@ const BudgetPlanning: React.FC<BudgetPlanningProps> = ({ categories, budgets, se
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const parentCategories = categories.filter(c => c.isActive && c.parentCategoryId === null);
+
   React.useEffect(() => {
     const existing = budgets.filter(b => b.month === month && b.year === year);
     const amounts: Record<number, number> = {};
@@ -107,18 +109,24 @@ const BudgetPlanning: React.FC<BudgetPlanningProps> = ({ categories, budgets, se
         </div>
 
         <div className="divide-y divide-slate-50">
-          {categories.filter(c => c.isActive).map(cat => (
+          {parentCategories.map(cat => (
             <div key={cat.id} className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-slate-50/30 transition-colors">
               <div className="flex items-center gap-4 flex-1">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center text-white"
                   style={{ backgroundColor: cat.color }}
                 >
-                  {/* Fix: use getIcon helper to render the actual category icon instead of a placeholder */}
                   {getIcon(cat.icon)}
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900">{cat.name}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-slate-900">{cat.name}</h4>
+                    {categories.filter(c => c.parentCategoryId === cat.id).length > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-bold">
+                        +{categories.filter(c => c.parentCategoryId === cat.id).length} תתי קטגוריות
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-400">הגדירו תקציב ליעד זה</p>
                 </div>
               </div>

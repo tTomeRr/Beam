@@ -22,6 +22,7 @@ import {
   Baby,
   Dog
 } from 'lucide-react';
+import { Category, CategoryTree } from '../types';
 
 export const AVAILABLE_ICONS = [
   { name: 'Utensils', label: 'כלי אוכל', Component: Utensils },
@@ -64,4 +65,45 @@ export const getIcon = (name: string, size: number = 20) => {
     return <Icon size={size} />;
   }
   return <Briefcase size={size} />;
+};
+
+export const buildCategoryTree = (categories: Category[]): CategoryTree[] => {
+  const parentCategories = categories.filter(c => c.parentCategoryId === null);
+
+  return parentCategories.map(parent => ({
+    ...parent,
+    subcategories: categories.filter(c => c.parentCategoryId === parent.id),
+  }));
+};
+
+export interface CategoryDropdownOption {
+  id: number;
+  label: string;
+  isParent: boolean;
+  parentId?: number;
+}
+
+export const getCategoryDropdownOptions = (categories: Category[]): CategoryDropdownOption[] => {
+  const options: CategoryDropdownOption[] = [];
+  const parentCategories = categories.filter(c => c.parentCategoryId === null);
+
+  parentCategories.forEach(parent => {
+    options.push({
+      id: parent.id,
+      label: parent.name,
+      isParent: true,
+    });
+
+    const subcategories = categories.filter(c => c.parentCategoryId === parent.id);
+    subcategories.forEach(sub => {
+      options.push({
+        id: sub.id,
+        label: `    ${sub.name}`,
+        isParent: false,
+        parentId: parent.id,
+      });
+    });
+  });
+
+  return options;
 };

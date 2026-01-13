@@ -7,10 +7,10 @@ export const mockUser: User = {
 };
 
 export const mockCategories: Category[] = [
-  { id: 1, name: 'מזון', icon: 'Utensils', color: '#FF6B6B', isActive: true },
-  { id: 2, name: 'בריאות', icon: 'HeartPulse', color: '#4ECDC4', isActive: true },
-  { id: 3, name: 'רכב', icon: 'Car', color: '#45B7D1', isActive: true },
-  { id: 4, name: 'לא פעיל', icon: 'Briefcase', color: '#B2BEC3', isActive: false },
+  { id: 1, name: 'מזון', icon: 'Utensils', color: '#FF6B6B', isActive: true, parentCategoryId: null, isDefault: false },
+  { id: 2, name: 'בריאות', icon: 'HeartPulse', color: '#4ECDC4', isActive: true, parentCategoryId: null, isDefault: false },
+  { id: 3, name: 'רכב', icon: 'Car', color: '#45B7D1', isActive: true, parentCategoryId: null, isDefault: false },
+  { id: 4, name: 'לא פעיל', icon: 'Briefcase', color: '#B2BEC3', isActive: false, parentCategoryId: null, isDefault: false },
 ];
 
 export const mockTransactions: Transaction[] = [
@@ -75,6 +75,8 @@ export const createMockCategory = (overrides?: Partial<Category>): Category => (
   icon: 'Briefcase',
   color: '#FF6B6B',
   isActive: true,
+  parentCategoryId: null,
+  isDefault: false,
   ...overrides,
 });
 

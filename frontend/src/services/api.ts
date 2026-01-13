@@ -1,4 +1,4 @@
-import { User, Category, Transaction, BudgetPlan, SavingsAccount } from '../types';
+import { User, Category, CategoryTree, Transaction, BudgetPlan, SavingsAccount } from '../types';
 import { getApiBaseUrl } from '../config/env';
 
 const API_BASE_URL = getApiBaseUrl();
@@ -80,10 +80,12 @@ export const api = {
 
   categories: {
     getAll: () => request<Category[]>('/categories'),
-    create: (name: string, icon: string, color: string) =>
+    getTree: () => request<CategoryTree[]>('/categories/tree'),
+    getSubcategories: (parentId: number) => request<Category[]>(`/categories/${parentId}/subcategories`),
+    create: (name: string, icon: string, color: string, parentCategoryId?: number) =>
       request<Category>('/categories', {
         method: 'POST',
-        body: JSON.stringify({ name, icon, color }),
+        body: JSON.stringify({ name, icon, color, parentCategoryId }),
       }),
     update: (id: number, updates: Partial<Category>) =>
       request<Category>(`/categories/${id}`, {

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { createUser, findUserByEmail } from '../models/User';
+import { seedDefaultCategoriesForUser } from '../models/CategorySeeder';
 import { config } from '../config';
 import { AppError } from '../middleware/errorHandler';
 import { JWTPayload } from '../types';
@@ -25,6 +26,8 @@ export const register = async (
 
     const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
     const user = await createUser(name, email, passwordHash);
+
+    await seedDefaultCategoriesForUser(user.id);
 
     const payload: JWTPayload = { userId: user.id, email: user.email };
     const token = jwt.sign(payload, config.jwtSecret, {

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getCategories, addCategory, modifyCategory } from '../controllers/categoryController';
+import { getCategories, addCategory, modifyCategory, getCategoryTreeHandler, getSubcategoriesHandler } from '../controllers/categoryController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
@@ -7,6 +7,8 @@ const router = Router();
 router.use(authenticateToken);
 
 router.get('/', getCategories);
+router.get('/tree', getCategoryTreeHandler);
+router.get('/:id/subcategories', getSubcategoriesHandler);
 router.post('/', addCategory);
 router.put('/:id', modifyCategory);
 

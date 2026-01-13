@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { Plus, Check, X, AlertCircle } from 'lucide-react';
+import { Plus, Check, X, AlertCircle, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { Category } from '../types';
-import { getIcon, AVAILABLE_ICONS } from '../constants';
+import { getIcon, AVAILABLE_ICONS, buildCategoryTree } from '../constants';
 import { api } from '../services/api';
 
 interface CategoriesProps {
@@ -12,10 +12,12 @@ interface CategoriesProps {
 
 const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }) => {
   const [isAdding, setIsAdding] = useState(false);
+  const [addingSubcategoryFor, setAddingSubcategoryFor] = useState<number | null>(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [newCat, setNewCat] = useState({ name: '', color: '#6366f1', icon: 'Briefcase' });
+  const [newCat, setNewCat] = useState({ name: '', color: '#6366f1', icon: 'Briefcase', parentCategoryId: null as number | null });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
 
   const addCategory = async () => {
     if (!newCat.name.trim()) return;
@@ -27,17 +29,46 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
       const category = await api.categories.create(
         newCat.name.trim(),
         newCat.icon,
-        newCat.color
+        newCat.color,
+        newCat.parentCategoryId || undefined
       );
       setCategories([...categories, category]);
-      setNewCat({ name: '', color: '#6366f1', icon: 'Briefcase' });
+      setNewCat({ name: '', color: '#6366f1', icon: 'Briefcase', parentCategoryId: null });
       setIsAdding(false);
+      setAddingSubcategoryFor(null);
       setShowIconPicker(false);
     } catch (err) {
       setError('שגיאה בהוספת קטגוריה');
       console.error('Failed to add category:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleExpanded = (id: number) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedCategories(newExpanded);
+  };
+
+  const startAddingSubcategory = (parentId: number, parentColor: string, parentIcon: string) => {
+    setAddingSubcategoryFor(parentId);
+    setNewCat({ name: '', color: parentColor, icon: parentIcon, parentCategoryId: parentId });
+    setIsAdding(true);
+    setExpandedCategories(new Set([...expandedCategories, parentId]));
+  };
+
+  const updateCategory = async (id: number, updates: Partial<Category>) => {
+    try {
+      const updated = await api.categories.update(id, updates);
+      setCategories(categories.map(c => c.id === id ? updated : c));
+    } catch (err) {
+      setError('שגיאה בעדכון קטגוריה');
+      console.error('Failed to update category:', err);
     }
   };
 
@@ -54,6 +85,9 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
     }
   };
 
+  const tree = buildCategoryTree(categories);
+  const parentCategories = categories.filter(c => c.parentCategoryId === null && c.isActive);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -62,11 +96,15 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
           <p className="text-slate-500">נהלו את סוגי ההוצאות שלכם</p>
         </div>
         <button
-          onClick={() => setIsAdding(true)}
+          onClick={() => {
+            setIsAdding(true);
+            setAddingSubcategoryFor(null);
+            setNewCat({ name: '', color: '#6366f1', icon: 'Briefcase', parentCategoryId: null });
+          }}
           className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
         >
           <Plus size={20} />
-          חדש
+          קטגוריה חדשה
         </button>
       </div>
 
@@ -79,7 +117,16 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
 
       {isAdding && (
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in fade-in slide-in-from-top-4 duration-300">
-          <h3 className="text-xl font-bold mb-4">הוספת קטגוריה חדשה</h3>
+          <h3 className="text-xl font-bold mb-4">
+            {addingSubcategoryFor ? 'הוספת תת-קטגוריה' : 'הוספת קטגוריה חדשה'}
+          </h3>
+          {addingSubcategoryFor && (
+            <div className="mb-4 p-3 bg-indigo-50 rounded-xl border border-indigo-200">
+              <span className="text-sm text-indigo-700 font-medium">
+                תחת: {categories.find(c => c.id === addingSubcategoryFor)?.name}
+              </span>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">שם הקטגוריה</label>
@@ -167,6 +214,7 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
             <button
               onClick={() => {
                 setIsAdding(false);
+                setAddingSubcategoryFor(null);
                 setShowIconPicker(false);
                 setError('');
               }}
@@ -179,32 +227,95 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {categories.map(cat => (
-          <div key={cat.id} className="bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between group hover:border-indigo-200 hover:shadow-md transition-all">
-            <div className="flex items-center gap-4">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg"
-                style={{ backgroundColor: cat.color }}
-              >
-                {getIcon(cat.icon)}
+      <div className="space-y-4">
+        {tree.map(parent => (
+          <div key={parent.id} className="bg-white rounded-3xl border border-slate-100 overflow-hidden hover:border-indigo-200 hover:shadow-md transition-all">
+            <div className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-4 flex-1">
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg"
+                  style={{ backgroundColor: parent.color }}
+                >
+                  {getIcon(parent.icon)}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-slate-900">{parent.name}</h4>
+                    {parent.isDefault && (
+                      <Lock size={14} className="text-slate-400" title="קטגוריה ברירת מחדל" />
+                    )}
+                    {parent.subcategories.length > 0 && (
+                      <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-bold">
+                        {parent.subcategories.length}
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-[10px] font-bold ${parent.isActive ? 'text-emerald-500' : 'text-slate-400'}`}>
+                    {parent.isActive ? 'פעיל' : 'לא פעיל'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h4 className="font-bold text-slate-900">{cat.name}</h4>
-                <p className={`text-[10px] font-bold ${cat.isActive ? 'text-emerald-500' : 'text-slate-400'}`}>
-                  {cat.isActive ? 'פעיל' : 'לא פעיל'}
-                </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => startAddingSubcategory(parent.id, parent.color, parent.icon)}
+                  className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl"
+                  title="הוסף תת-קטגוריה"
+                >
+                  <Plus size={18} />
+                </button>
+                <button
+                  onClick={() => toggleActive(parent.id)}
+                  className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl"
+                  title={parent.isActive ? "השבת" : "הפעל"}
+                >
+                  {parent.isActive ? <X size={18} /> : <Check size={18} />}
+                </button>
+                {parent.subcategories.length > 0 && (
+                  <button
+                    onClick={() => toggleExpanded(parent.id)}
+                    className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl"
+                    title={expandedCategories.has(parent.id) ? "סגור" : "פתח"}
+                  >
+                    {expandedCategories.has(parent.id) ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => toggleActive(cat.id)}
-                className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl"
-                title={cat.isActive ? "השבת" : "הפעל"}
-              >
-                {cat.isActive ? <X size={18} /> : <Check size={18} />}
-              </button>
-            </div>
+
+            {expandedCategories.has(parent.id) && parent.subcategories.length > 0 && (
+              <div className="border-t border-slate-100 bg-slate-50/30">
+                {parent.subcategories.map(sub => (
+                  <div key={sub.id} className="p-4 pr-16 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
+                        style={{ backgroundColor: sub.color }}
+                      >
+                        {getIcon(sub.icon, 16)}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h5 className="font-medium text-slate-700">{sub.name}</h5>
+                          {sub.isDefault && (
+                            <Lock size={12} className="text-slate-400" title="קטגוריה ברירת מחדל" />
+                          )}
+                        </div>
+                        <p className={`text-[9px] font-bold ${sub.isActive ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          {sub.isActive ? 'פעיל' : 'לא פעיל'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleActive(sub.id)}
+                      className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl"
+                      title={sub.isActive ? "השבת" : "הפעל"}
+                    >
+                      {sub.isActive ? <X size={16} /> : <Check size={16} />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

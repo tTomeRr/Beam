@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Search, Filter, Trash2, Calendar, FileText, CreditCard, AlertCircle } from 'lucide-react';
 import { Category, Transaction } from '../types';
 import { api } from '../services/api';
+import CategorySelector from '../components/shared/CategorySelector';
 
 interface TransactionsProps {
   categories: Category[];
@@ -112,13 +113,11 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
             </div>
             <div>
               <label className="block text-xs font-black text-slate-400 mb-2 uppercase">קטגוריה</label>
-              <select
+              <CategorySelector
+                categories={categories}
                 value={newTx.categoryId}
-                onChange={(e) => setNewTx({...newTx, categoryId: parseInt(e.target.value)})}
-                className="w-full px-4 py-3 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-              >
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+                onChange={(id) => setNewTx({...newTx, categoryId: id})}
+              />
             </div>
             <div>
               <label className="block text-xs font-black text-slate-400 mb-2 uppercase">תאריך</label>
@@ -187,6 +186,11 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
             <tbody className="divide-y divide-slate-50">
               {filtered.map(tx => {
                 const cat = categories.find(c => c.id === tx.categoryId);
+                const parentCat = cat?.parentCategoryId
+                  ? categories.find(c => c.id === cat.parentCategoryId)
+                  : null;
+                const categoryDisplay = parentCat ? `${parentCat.name} > ${cat?.name}` : cat?.name;
+
                 return (
                   <tr key={tx.id} className="group hover:bg-indigo-50/20 transition-colors">
                     <td className="px-6 py-5">
@@ -199,7 +203,7 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
                     </td>
                     <td className="px-6 py-5">
                       <span className="text-xs px-3 py-1 rounded-full font-bold border" style={{ borderColor: cat?.color + '40', backgroundColor: cat?.color + '10', color: cat?.color }}>
-                        {cat?.name}
+                        {categoryDisplay}
                       </span>
                     </td>
                     <td className="px-6 py-5">

@@ -35,11 +35,13 @@ export const createTestCategory = async (
   userId: number,
   name = 'Test Category',
   icon = 'ShoppingCart',
-  color = '#4F46E5'
+  color = '#4F46E5',
+  parentCategoryId: number | null = null,
+  isDefault = false
 ): Promise<Category> => {
   const result = await testPool.query<Category>(
-    'INSERT INTO categories (user_id, name, icon, color, is_active) VALUES ($1, $2, $3, $4, true) RETURNING *',
-    [userId, name, icon, color]
+    'INSERT INTO categories (user_id, name, icon, color, is_active, parent_category_id, is_default) VALUES ($1, $2, $3, $4, true, $5, $6) RETURNING *',
+    [userId, name, icon, color, parentCategoryId, isDefault]
   );
 
   return result.rows[0];

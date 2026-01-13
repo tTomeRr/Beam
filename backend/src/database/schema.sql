@@ -18,8 +18,11 @@ CREATE TABLE IF NOT EXISTS categories (
     icon VARCHAR(50) NOT NULL,
     color VARCHAR(7) NOT NULL,
     is_active BOOLEAN DEFAULT true,
+    parent_category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
+    is_default BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT check_not_self_parent CHECK (parent_category_id IS NULL OR parent_category_id != id)
 );
 
 -- Transactions table
@@ -61,6 +64,7 @@ CREATE TABLE IF NOT EXISTS savings_accounts (
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
+CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON categories(parent_category_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON transactions(category_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);

@@ -14,8 +14,14 @@ export interface Category {
   icon: string;
   color: string;
   isActive: boolean;
+  parentCategoryId: number | null;
+  isDefault: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+export interface CategoryTree extends Category {
+  subcategories: Category[];
 }
 
 export interface Transaction {
