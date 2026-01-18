@@ -161,3 +161,41 @@ export const getSubcategories = async (userId: number, parentId: number): Promis
     isDefault: row.is_default,
   }));
 };
+
+export const deleteCategory = async (id: number, userId: number): Promise<void> => {
+  const categoryResult = await query(
+    'SELECT is_default, parent_category_id FROM categories WHERE id = $1 AND user_id = $2',
+    [id, userId]
+  );
+
+  if (categoryResult.rows.length === 0) {
+    throw new Error('Category not found');
+  }
+
+  const category = categoryResult.rows[0];
+
+  if (category.is_default) {
+    throw new Error('לא ניתן למחוק קטגוריית ברירת מחדל');
+  }
+
+  const transactionsResult = await query(
+    'SELECT COUNT(*) as count FROM transactions WHERE category_id = $1 AND user_id = $2',
+    [id, userId]
+  );
+
+  if (parseInt(transactionsResult.rows[0].count, 10) > 0) {
+    throw new Error('לא ניתן למחוק קטגוריה עם הוצאות קיימות');
+  }
+
+  if (category.parent_category_id === null) {
+    await query(
+      'DELETE FROM categories WHERE parent_category_id = $1 AND user_id = $2',
+      [id, userId]
+    );
+  }
+
+  await query(
+    'DELETE FROM categories WHERE id = $1 AND user_id = $2',
+    [id, userId]
+  );
+};

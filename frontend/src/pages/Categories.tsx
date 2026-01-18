@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Check, X, AlertCircle, ChevronDown, ChevronUp, Lock } from 'lucide-react';
+import { Plus, Check, X, AlertCircle, ChevronDown, ChevronUp, Lock, Trash2, Eye, EyeOff } from 'lucide-react';
 import { Category } from '../types';
 import { getIcon, AVAILABLE_ICONS, buildCategoryTree } from '../constants';
 import { api } from '../services/api';
@@ -18,6 +18,7 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: number; name: string } | null>(null);
 
   const addCategory = async () => {
     if (!newCat.name.trim()) return;
@@ -82,6 +83,24 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
     } catch (err) {
       setError('שגיאה בעדכון קטגוריה');
       console.error('Failed to update category:', err);
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    try {
+      await api.categories.delete(id);
+      const category = categories.find(c => c.id === id);
+      if (category && category.parentCategoryId === null) {
+        setCategories(categories.filter(c => c.id !== id && c.parentCategoryId !== id));
+      } else {
+        setCategories(categories.filter(c => c.id !== id));
+      }
+      setDeleteConfirm(null);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'שגיאה במחיקת קטגוריה';
+      setError(errorMessage);
+      setDeleteConfirm(null);
+      console.error('Failed to delete category:', err);
     }
   };
 
@@ -230,7 +249,10 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
       <div className="space-y-4">
         {tree.map(parent => (
           <div key={parent.id} className="bg-white rounded-3xl border border-slate-100 overflow-hidden hover:border-indigo-200 hover:shadow-md transition-all">
-            <div className="p-4 flex items-center justify-between">
+            <div
+              className="p-4 flex items-center justify-between cursor-pointer"
+              onClick={() => parent.subcategories.length > 0 && toggleExpanded(parent.id)}
+            >
               <div className="flex items-center gap-4 flex-1">
                 <div
                   className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg"
@@ -257,22 +279,35 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => startAddingSubcategory(parent.id, parent.color, parent.icon)}
+                  onClick={(e) => { e.stopPropagation(); startAddingSubcategory(parent.id, parent.color, parent.icon); }}
                   className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl"
                   title="הוסף תת-קטגוריה"
                 >
                   <Plus size={18} />
                 </button>
                 <button
-                  onClick={() => toggleActive(parent.id)}
-                  className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl"
-                  title={parent.isActive ? "השבת" : "הפעל"}
+                  onClick={(e) => { e.stopPropagation(); toggleActive(parent.id); }}
+                  className={`p-2 rounded-xl transition-all ${
+                    parent.isActive
+                      ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                      : 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50'
+                  }`}
+                  title={parent.isActive ? "הסתרת קטגוריה" : "הצגת קטגוריה"}
                 >
-                  {parent.isActive ? <X size={18} /> : <Check size={18} />}
+                  {parent.isActive ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
+                {!parent.isDefault && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: parent.id, name: parent.name }); }}
+                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                    title="מחיקת קטגוריה"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                )}
                 {parent.subcategories.length > 0 && (
                   <button
-                    onClick={() => toggleExpanded(parent.id)}
+                    onClick={(e) => { e.stopPropagation(); toggleExpanded(parent.id); }}
                     className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl"
                     title={expandedCategories.has(parent.id) ? "סגור" : "פתח"}
                   >
@@ -305,13 +340,28 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => toggleActive(sub.id)}
-                      className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl"
-                      title={sub.isActive ? "השבת" : "הפעל"}
-                    >
-                      {sub.isActive ? <X size={16} /> : <Check size={16} />}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleActive(sub.id)}
+                        className={`p-2 rounded-xl transition-all ${
+                          sub.isActive
+                            ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'
+                            : 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50'
+                        }`}
+                        title={sub.isActive ? "הסתרת קטגוריה" : "הצגת קטגוריה"}
+                      >
+                        {sub.isActive ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      {!sub.isDefault && (
+                        <button
+                          onClick={() => setDeleteConfirm({ id: sub.id, name: sub.name })}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                          title="מחיקת קטגוריה"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -319,6 +369,33 @@ const CategoriesPage: React.FC<CategoriesProps> = ({ categories, setCategories }
           </div>
         ))}
       </div>
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">מחיקת קטגוריה</h3>
+            <p className="text-slate-600 mb-6">
+              האם אתה בטוח שברצונך למחוק את הקטגוריה "{deleteConfirm.name}"?
+              <br />
+              <span className="text-sm text-slate-400">פעולה זו אינה ניתנת לביטול.</span>
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleDeleteCategory(deleteConfirm.id)}
+                className="flex-1 bg-red-600 text-white py-3 rounded-2xl font-bold hover:bg-red-700 transition-colors"
+              >
+                מחיקה
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 border border-slate-200 py-3 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-colors"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

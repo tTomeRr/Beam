@@ -92,6 +92,10 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(updates),
       }),
+    delete: (id: number) =>
+      request<void>(`/categories/${id}`, {
+        method: 'DELETE',
+      }),
   },
 
   transactions: {

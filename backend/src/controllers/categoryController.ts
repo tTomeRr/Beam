@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { getAllCategories, createCategory, updateCategory, getCategoryTree, getSubcategories } from '../models/Category';
+import { getAllCategories, createCategory, updateCategory, getCategoryTree, getSubcategories, deleteCategory } from '../models/Category';
 import { AppError } from '../middleware/errorHandler';
 
 export const getCategories = async (
@@ -97,5 +97,35 @@ export const getSubcategoriesHandler = async (
     res.json(subcategories);
   } catch (error) {
     next(error);
+  }
+};
+
+export const removeCategory = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const id = parseInt(req.params.id, 10);
+
+    if (isNaN(id)) {
+      throw new AppError('Invalid category ID', 400);
+    }
+
+    await deleteCategory(id, userId);
+    res.status(204).send();
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'Category not found') {
+        next(new AppError(error.message, 404));
+      } else if (error.message.includes('לא ניתן')) {
+        next(new AppError(error.message, 400));
+      } else {
+        next(error);
+      }
+    } else {
+      next(error);
+    }
   }
 };

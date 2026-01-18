@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Search, Filter, Trash2, Calendar, FileText, CreditCard, AlertCircle } from 'lucide-react';
 import { Category, Transaction } from '../types';
 import { api } from '../services/api';
-import CategorySelector from '../components/shared/CategorySelector';
+import TwoStepCategorySelector from '../components/shared/TwoStepCategorySelector';
 
 interface TransactionsProps {
   categories: Category[];
@@ -24,7 +24,7 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
   });
 
   const addTransaction = async () => {
-    if (!newTx.amount || !newTx.description) return;
+    if (!newTx.amount) return;
 
     setLoading(true);
     setError('');
@@ -59,7 +59,7 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
 
   const filtered = useMemo(() => {
     return transactions
-      .filter(t => t.description.toLowerCase().includes(filterText.toLowerCase()))
+      .filter(t => (t.description || '').toLowerCase().includes(filterText.toLowerCase()))
       .reverse();
   }, [transactions, filterText]);
 
@@ -90,9 +90,9 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
           <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
             <CreditCard className="text-indigo-600" /> הוספת תנועה
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
-              <label className="block text-xs font-black text-slate-400 mb-2 uppercase">תיאור</label>
+              <label className="block text-xs font-black text-slate-400 mb-2 uppercase">תיאור (אופציונלי)</label>
               <input
                 type="text"
                 value={newTx.description}
@@ -102,7 +102,7 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
               />
             </div>
             <div>
-              <label className="block text-xs font-black text-slate-400 mb-2 uppercase">סכום</label>
+              <label className="block text-xs font-black text-slate-400 mb-2 uppercase">סכום *</label>
               <input
                 type="number"
                 value={newTx.amount}
@@ -111,9 +111,9 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
                 className="w-full px-4 py-3 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
               />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-xs font-black text-slate-400 mb-2 uppercase">קטגוריה</label>
-              <CategorySelector
+              <TwoStepCategorySelector
                 categories={categories}
                 value={newTx.categoryId}
                 onChange={(id) => setNewTx({...newTx, categoryId: id})}
@@ -198,7 +198,9 @@ const Transactions: React.FC<TransactionsProps> = ({ categories, transactions, s
                         <div className="p-2 bg-slate-100 rounded-lg text-slate-400">
                           <FileText size={18} />
                         </div>
-                        <span className="font-bold text-slate-700">{tx.description}</span>
+                        <span className="font-bold text-slate-700">
+                          {tx.description || <span className="text-slate-400 font-normal">(ללא תיאור)</span>}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-5">
